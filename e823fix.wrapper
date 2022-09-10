@@ -38,9 +38,9 @@ pcie_set_speed () {
 
     lc2n=$(printf "%08x" $(((0x$lc2 & 0xFFFFFFF0) | $speed)))
 
-    setpci "$setpci_verbose" -s $dev CAP_EXP+30.L=$lc2n
+    setpci $setpci_verbose -s $dev CAP_EXP+30.L=$lc2n
 
-    setpci "$setpci_verbose" -s $dev CAP_EXP+10.L=20:20
+    setpci $setpci_verbose -s $dev CAP_EXP+10.L=20:20
 }
 
 if [ $EUID != 0 ]; then
@@ -79,57 +79,57 @@ pcie_set_speed "$ricoh_pci_port" 1
 
 # Disable PCIe extended tags
 # http://www.alexforencich.com/wiki/en/pcie/ext-tag-control
-setpci "$setpci_verbose" -s "$ricoh_pci_port" CAP_EXP+8.w=0000:0100
+setpci $setpci_verbose -s "$ricoh_pci_port" CAP_EXP+8.w=0000:0100
 
 # Disable PCIe Fatal Error Reporting
 # https://github.com/alexforencich/verilog-pcie/tree/master/scripts
-setpci "$setpci_verbose" -s "$ricoh_pci_root_port" COMMAND=0000:0100
-setpci "$setpci_verbose" -s "$ricoh_pci_root_port" CAP_EXP+8.w=0000:0004
+setpci $setpci_verbose -s "$ricoh_pci_root_port" COMMAND=0000:0100
+setpci $setpci_verbose -s "$ricoh_pci_root_port" CAP_EXP+8.w=0000:0004
 
 # https://blog.intr.overt.org/?p=59
 # Disable the MMC controller via Firewire interface
 disable=$(setpci -s "$ricoh_pci_port" cb.B)
 write_enable=$(setpci -s "$ricoh_pci_port" ca.B)
-setpci "$setpci_verbose" -s "$ricoh_pci_port" ca.B=57 # write enable
-setpci "$setpci_verbose" -s "$ricoh_pci_port" cb.B=$(printf "%02x" $((0x$disable | 0x02))) # MMC disable
-setpci "$setpci_verbose" -s "$ricoh_pci_port" ca.B="$write_enable" # write disable
+setpci $setpci_verbose -s "$ricoh_pci_port" ca.B=57 # write enable
+setpci $setpci_verbose -s "$ricoh_pci_port" cb.B=$(printf "%02x" $((0x$disable | 0x02))) # MMC disable
+setpci $setpci_verbose -s "$ricoh_pci_port" ca.B="$write_enable" # write disable
 
 # https://github.com/torvalds/linux/blob/master/drivers/pci/quirks.c
 # RICOH 0xe822 and 0xe823 SD/MMC card readers fail to recognize
 # certain types of SD/MMC cards. Lowering the SD base clock
 # frequency from 200Mhz to 50Mhz fixes this issue.
-setpci "$setpci_verbose" -s "$ricoh_pci_port" f9.B=fc # key register for 0x150
-setpci "$setpci_verbose" -s "$ricoh_pci_port" 150.B=10 # SD2.0 mode enable for changing base clock frequency to 50Mhz
-setpci "$setpci_verbose" -s "$ricoh_pci_port" f9.B=00
-setpci "$setpci_verbose" -s "$ricoh_pci_port" fc.B=01 # key register for 0xe1
-setpci "$setpci_verbose" -s "$ricoh_pci_port" e1.B=32 # base clock frequency (0x32 = 50Mhz new clock frequency)
-setpci "$setpci_verbose" -s "$ricoh_pci_port" fc.B=00
+setpci $setpci_verbose -s "$ricoh_pci_port" f9.B=fc # key register for 0x150
+setpci $setpci_verbose -s "$ricoh_pci_port" 150.B=10 # SD2.0 mode enable for changing base clock frequency to 50Mhz
+setpci $setpci_verbose -s "$ricoh_pci_port" f9.B=00
+setpci $setpci_verbose -s "$ricoh_pci_port" fc.B=01 # key register for 0xe1
+setpci $setpci_verbose -s "$ricoh_pci_port" e1.B=32 # base clock frequency (0x32 = 50Mhz new clock frequency)
+setpci $setpci_verbose -s "$ricoh_pci_port" fc.B=00
 
 # Try to see if the base clock can be set to 1 MHz...
-setpci "$setpci_verbose" -s "$ricoh_pci_port" fc.B=01 # key register for 0xe1
-setpci "$setpci_verbose" -s "$ricoh_pci_port" e1.B=01 # base clock frequency
-setpci "$setpci_verbose" -s "$ricoh_pci_port" fc.B=00
+setpci $setpci_verbose -s "$ricoh_pci_port" fc.B=01 # key register for 0xe1
+setpci $setpci_verbose -s "$ricoh_pci_port" e1.B=01 # base clock frequency
+setpci $setpci_verbose -s "$ricoh_pci_port" fc.B=00
 
 # https://chowdera.com/2022/04/202204210725501282.html
 # Disable Mem control/Busmaster
-setpci "$setpci_verbose" -s "$ricoh_pci_port" CAP_PM+4.b=0b
-setpci "$setpci_verbose" -s "$ricoh_pci_port" 4.w=0
-setpci "$setpci_verbose" -s "$ricoh_pci_port" a8.w=0
+setpci $setpci_verbose -s "$ricoh_pci_port" CAP_PM+4.b=0b
+setpci $setpci_verbose -s "$ricoh_pci_port" 4.w=0
+setpci $setpci_verbose -s "$ricoh_pci_port" a8.w=0
 
 # Disable PME (gets enabled on resume)
-setpci "$setpci_verbose" -s "$ricoh_pci_port" CAP_PM+5.B=0:1
+setpci $setpci_verbose -s "$ricoh_pci_port" CAP_PM+5.B=0:1
 # Put card reader and its PCIe root port into D3 mode
 # Thanks to tohyf: https://github.com/Bumblebee-Project/bbswitch/issues/107#issuecomment-289259858
-setpci "$setpci_verbose" -s "$ricoh_pci_port" CAP_PM+4.b=0b
+setpci $setpci_verbose -s "$ricoh_pci_port" CAP_PM+4.b=0b
 # https://unix.stackexchange.com/questions/471532/echo-1-sys-bus-pci-slots-slot-number-power-is-changing-value-of-pcie-config
 # https://www.twblogs.net/a/5c52a0cfbd9eee0e7d1db7fc
 # https://www.intel.com/content/www/us/en/docs/programmable/683488/16-0/pci-express-capability-structure.html
 # http://billauer.co.il/blog/2011/07/pcie-tlp-dllp-retransmit-data-link-layer-error/
-setpci "$setpci_verbose" -s "$ricoh_pci_root_port" CAP_PM+4.b=03
-setpci "$setpci_verbose" -s "$ricoh_pci_root_port" CAP_EXP+0x18.w=0x0400 # write PCI_EXP_SLTCTL_PWR_OFF
-setpci "$setpci_verbose" -s "$ricoh_pci_root_port" 4.w=0
-setpci "$setpci_verbose" -s "$ricoh_pci_root_port" a8.w=0
-setpci "$setpci_verbose" -s "$ricoh_pci_root_port" CAP_PM+4.b=03
+setpci $setpci_verbose -s "$ricoh_pci_root_port" CAP_PM+4.b=03
+setpci $setpci_verbose -s "$ricoh_pci_root_port" CAP_EXP+0x18.w=0x0400 # write PCI_EXP_SLTCTL_PWR_OFF
+setpci $setpci_verbose -s "$ricoh_pci_root_port" 4.w=0
+setpci $setpci_verbose -s "$ricoh_pci_root_port" a8.w=0
+setpci $setpci_verbose -s "$ricoh_pci_root_port" CAP_PM+4.b=03
 
 # echo 1 > "/sys/bus/pci/devices/0000:$ricoh_pci_port/remove"
 # echo 1 > "/sys/bus/pci/devices/0000:$ricoh_pci_root_port/remove"
