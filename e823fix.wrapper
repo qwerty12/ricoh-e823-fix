@@ -52,12 +52,16 @@ set -o errexit      # Exit on most errors (see the manual)
 set -o nounset      # Disallow expansion of unset variables
 set -o pipefail     # Use last non-zero exit code in a pipeline
 
+if [ -n "$SYSTEMD_EXEC_PID" ]; then
+    sleep 2s
+fi
+
 ricoh_pci_port=""
 ricoh_pci_root_port=""
 
 # Get the slot number because the Ricoh card reader might change its device ID during certain setpci operations
 while IFS= read -r line; do
-    if [[ $line == *Ricoh* ]]; then
+    if [[ $line == *Ricoh* ]] && [[ $line == *SD* ]]; then
         IFS=" " read -r -a ports <<< "$line"
         ricoh_pci_port="${ports#*/}"
         ricoh_pci_root_port="${ports%/*}"
@@ -75,10 +79,12 @@ if [ -z "$ricoh_pci_port" ] || [ -z "$ricoh_pci_root_port" ]; then
     exit 1
 fi
 
-pcie_set_speed "$ricoh_pci_port" 1
-
 # Disable PCIe extended tags
 # http://www.alexforencich.com/wiki/en/pcie/ext-tag-control
+setpci $setpci_verbose -s "$ricoh_pci_port" CAP_EXP+8.w=0000:0100 || exit 0
+
+pcie_set_speed "$ricoh_pci_port" 1
+
 setpci $setpci_verbose -s "$ricoh_pci_port" CAP_EXP+8.w=0000:0100
 
 # Disable PCIe Fatal Error Reporting
@@ -112,12 +118,12 @@ setpci $setpci_verbose -s "$ricoh_pci_port" fc.B=00
 
 # https://chowdera.com/2022/04/202204210725501282.html
 # Disable Mem control/Busmaster
-setpci $setpci_verbose -s "$ricoh_pci_port" CAP_PM+4.b=0b
 setpci $setpci_verbose -s "$ricoh_pci_port" 4.w=0
 setpci $setpci_verbose -s "$ricoh_pci_port" a8.w=0
 
 # Disable PME (gets enabled on resume)
-setpci $setpci_verbose -s "$ricoh_pci_port" CAP_PM+5.B=0:1
+setpci $setpci_verbose -s "$ricoh_pci_port" CAP_PM+5.b=0:1
+
 # Put card reader and its PCIe root port into D3 mode
 # Thanks to tohyf: https://github.com/Bumblebee-Project/bbswitch/issues/107#issuecomment-289259858
 setpci $setpci_verbose -s "$ricoh_pci_port" CAP_PM+4.b=0b
